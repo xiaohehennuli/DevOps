@@ -1,0 +1,51 @@
+# .github/workflows/automation.yml
+name: Automation
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # 每周日运行
+  workflow_dispatch:
+
+jobs:
+  dependabot:
+    name: Dependency Updates
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Update dependencies
+      run: |
+        npx npm-check-updates -u
+        npm ci
+        
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore(deps): update dependencies'
+        title: '📦 Update dependencies'
+        body: |
+          Automated dependency update
+          
+          This PR updates all dependencies to their latest versions.
+        branch: chore/dependency-updates
+        delete-branch: true
+
+  cleanup:
+    name: Cleanup Old Resources
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Clean up old Docker images
+      run: |
+        docker system prune -af
+        
+    - name: Clean up old workflow runs
+      uses: Mattraks/delete-workflow-runs@v2
+      with:
+        token: ${{ github.token }}
+        repository: ${{ github.repository }}
+        retain_days: 30
+        keep_minimum_runs: 10
